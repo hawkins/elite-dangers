@@ -163,5 +163,14 @@ function onAsteroidBulletCollision(asteroid, bullet) {
 
   if (asteroid.health <= 0) {
     asteroid.kill();
+
+    healPlayer(1);
+  }
+}
+
+function healPlayer(health) {
+  playerHealth = health + playerHealth;
+  if (playerHealth > 10) {
+    playerHealth = 10;
   }
 }
