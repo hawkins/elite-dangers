@@ -15,6 +15,7 @@ function preload() {
 }
 
 var playerHealth = 10;
+var throttle = 0;
 
 var player;
 var cursors;
@@ -70,7 +71,10 @@ function update() {
   var asteroid = asteroids.getFirstExists(false);
   while (asteroid) {
     // Randomly place asteroids
-    asteroid.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    asteroid.reset(
+      game.rnd.integerInRange(game.world.width, 0),
+      game.rnd.integerInRange(game.world.height, 0)
+    );
     asteroid.angle = game.rnd.integerInRange(0, 360);
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
@@ -83,14 +87,20 @@ function update() {
 
   // Player movement
   if (cursors.up.isDown) {
-    game.physics.arcade.accelerationFromRotation(
-      player.rotation,
-      200,
-      player.body.acceleration
-    );
-  } else {
-    player.body.acceleration.set(0);
+    throttle += 10;
+    if (throttle > 200) throttle = 200;
   }
+
+  if (cursors.down.isDown) {
+    throttle -= 10;
+    if (throttle < 0) throttle = 0;
+  }
+
+  game.physics.arcade.accelerationFromRotation(
+    player.rotation,
+    throttle,
+    player.body.acceleration
+  );
 
   if (cursors.left.isDown) {
     player.body.angularVelocity = -300;
@@ -149,6 +159,7 @@ function screenWrap(player) {
 
 function render() {
   game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 20);
+  game.debug.text(`Player throttle: ${throttle.toFixed()}`, 10, 40);
 }
 
 function onAsteroidPlayerCollision(asteroid, player) {
