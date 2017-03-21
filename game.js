@@ -81,7 +81,10 @@ function update() {
   var asteroid = asteroids.getFirstExists(false);
   while (asteroid) {
     // Randomly place asteroids
-    asteroid.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    asteroid.reset(
+      game.rnd.integerInRange(game.world.width, 0),
+      game.rnd.integerInRange(game.world.height, 0)
+    );
     asteroid.angle = game.rnd.integerInRange(0, 360);
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
@@ -96,7 +99,10 @@ function update() {
   var enemy = enemies.getFirstExists(false);
   while (enemy) {
     // Randomly place asteroids
-    enemy.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    enemy.reset(
+      game.rnd.integerInRange(game.world.width, 0),
+      game.rnd.integerInRange(game.world.height, 0)
+    );
     enemy.angle = game.rnd.integerInRange(0, 360);
 
     enemy.health = game.rnd.integerInRange(1, 20);
@@ -129,14 +135,15 @@ function update() {
   }
 
   screenWrap(player);
-
   bullets.forEachExists(screenWrap, this);
-
   asteroids.forEachExists(screenWrap, this);
 
+  game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
   game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
-  game.physics.arcade.collide(asteroids, asteroids);
+  game.physics.arcade.collide(asteroids, enemies, onAsteroidEnemyCollision);
+  game.physics.arcade.collide(player, enemies, onPlayerEnemyCollision);
+  game.physics.arcade.overlap(enemies, bullets, onEnemyBulletCollision);
 }
 
 function fireBullet() {
@@ -186,9 +193,39 @@ function onAsteroidBulletCollision(asteroid, bullet) {
   asteroid.health--;
 
   if (asteroid.health <= 0) {
+    // TODO: Play sound here
     asteroid.kill();
 
     healPlayer(1);
+  }
+}
+
+function onAsteroidEnemyCollision(asteroid, enemy) {
+  enemy.health -= 0.25;
+
+  if (enemy.health <= 0) {
+    // TODO: Play sound here
+    enemy.kill();
+  }
+}
+
+function onPlayerEnemyCollision(player, enemy) {
+  enemy.health -= 5;
+
+  playerHealth -= 4;
+
+  if (enemy.health <= 0) {
+    // TODO: Play sound here
+    enemy.kill();
+  }
+}
+
+function onEnemyBulletCollision(enemy, bullet) {
+  enemy.health -= 1;
+
+  if (enemy.health <= 0) {
+    // TODO: Play sound here
+    enemy.kill();
   }
 }
 
