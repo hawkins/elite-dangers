@@ -9,6 +9,9 @@ function preload() {
   game.load.image("space", "assets/deep-space.jpg");
   game.load.image("bullet", "assets/bullets.png");
   game.load.image("ship", "assets/ship.png");
+  game.load.image("asteroid1", "assets/asteroid1.png");
+  game.load.image("asteroid2", "assets/asteroid2.png");
+  game.load.image("asteroid3", "assets/asteroid3.png");
 }
 
 var sprite;
@@ -18,43 +21,62 @@ var bullet;
 var bullets;
 var bulletTime = 0;
 
+var asteroids;
+
 function create() {
-  //  This will run in Canvas mode, so let's gain a little speed and display
   game.renderer.clearBeforeRender = false;
   game.renderer.roundPixels = true;
 
-  //  We need arcade physics
   game.physics.startSystem(Phaser.Physics.ARCADE);
 
-  //  A spacey background
+  // Bakground
   game.add.tileSprite(0, 0, game.width, game.height, "space");
 
-  //  Our ships bullets
+  // Asteroids
+  asteroids = game.add.group();
+  asteroids.enableBody = true;
+  asteroids.physicsBodyType = Phaser.Physics.ARCADE;
+  asteroids.createMultiple(10, "asteroid1");
+  asteroids.createMultiple(10, "asteroid2");
+  asteroids.createMultiple(10, "asteroid3");
+  asteroids.setAll("anchor.x", 0.5);
+  asteroids.setAll("anchor.y", 0.5);
+
+  // Player bullets
   bullets = game.add.group();
   bullets.enableBody = true;
   bullets.physicsBodyType = Phaser.Physics.ARCADE;
-
-  //  All 40 of them
   bullets.createMultiple(40, "bullet");
   bullets.setAll("anchor.x", 0.5);
   bullets.setAll("anchor.y", 0.5);
 
-  //  Our player ship
+  // Player
   sprite = game.add.sprite(300, 300, "ship");
   sprite.anchor.set(0.5);
-
-  //  and its physics settings
   game.physics.enable(sprite, Phaser.Physics.ARCADE);
 
   sprite.body.drag.set(100);
   sprite.body.maxVelocity.set(200);
 
-  //  Game input
+  // Game input
   cursors = game.input.keyboard.createCursorKeys();
   game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
 }
 
 function update() {
+  // Asteroid movement
+  var asteroid = asteroids.getFirstExists(false);
+  while (asteroid) {
+    // Randomly place asteroids
+    asteroid.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    asteroid.angle = game.rnd.integerInRange(0, 360);
+    asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
+    asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
+
+    // Get the next one
+    var asteroid = asteroids.getFirstExists(false);
+  }
+  // Player movement
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
       sprite.rotation,
