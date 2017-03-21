@@ -9,6 +9,7 @@ function preload() {
   game.load.image("space", "assets/deep-space.jpg");
   game.load.image("bullet", "assets/bullets.png");
   game.load.image("ship", "assets/ship.png");
+  game.load.image("enemyship", "assets/enemy-ship.png");
   game.load.image("asteroid1", "assets/asteroid1.png");
   game.load.image("asteroid2", "assets/asteroid2.png");
   game.load.image("asteroid3", "assets/asteroid3.png");
@@ -24,6 +25,8 @@ var bullets;
 var bulletTime = 0;
 
 var asteroids;
+
+var enemies;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -43,6 +46,14 @@ function create() {
   asteroids.createMultiple(10, "asteroid3");
   asteroids.setAll("anchor.x", 0.5);
   asteroids.setAll("anchor.y", 0.5);
+
+  // Enemies
+  enemies = game.add.group();
+  enemies.enableBody = true;
+  enemies.physicsBodyType = Phaser.Physics.ARCADE;
+  enemies.createMultiple(10, "enemyship");
+  enemies.setAll("anchor.x", 0.5);
+  enemies.setAll("anchor.y", 0.5);
 
   // Player bullets
   bullets = game.add.group();
@@ -79,6 +90,19 @@ function update() {
 
     // Get the next one
     var asteroid = asteroids.getFirstExists(false);
+  }
+
+  // Enemy movement
+  var enemy = enemies.getFirstExists(false);
+  while (enemy) {
+    // Randomly place asteroids
+    enemy.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    enemy.angle = game.rnd.integerInRange(0, 360);
+
+    enemy.health = game.rnd.integerInRange(1, 20);
+
+    // Get the next one
+    var enemy = enemies.getFirstExists(false);
   }
 
   // Player movement
