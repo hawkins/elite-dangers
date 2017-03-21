@@ -14,7 +14,9 @@ function preload() {
   game.load.image("asteroid3", "assets/asteroid3.png");
 }
 
-var sprite;
+var playerHealth = 10;
+
+var player;
 var cursors;
 
 var bullet;
@@ -51,12 +53,12 @@ function create() {
   bullets.setAll("anchor.y", 0.5);
 
   // Player
-  sprite = game.add.sprite(300, 300, "ship");
-  sprite.anchor.set(0.5);
-  game.physics.enable(sprite, Phaser.Physics.ARCADE);
+  player = game.add.sprite(300, 300, "ship");
+  player.anchor.set(0.5);
+  game.physics.enable(player, Phaser.Physics.ARCADE);
 
-  sprite.body.drag.set(100);
-  sprite.body.maxVelocity.set(200);
+  player.body.drag.set(100);
+  player.body.maxVelocity.set(200);
 
   // Game input
   cursors = game.input.keyboard.createCursorKeys();
@@ -76,32 +78,38 @@ function update() {
     // Get the next one
     var asteroid = asteroids.getFirstExists(false);
   }
+
   // Player movement
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
-      sprite.rotation,
+      player.rotation,
       200,
-      sprite.body.acceleration
+      player.body.acceleration
     );
   } else {
-    sprite.body.acceleration.set(0);
+    player.body.acceleration.set(0);
   }
 
   if (cursors.left.isDown) {
-    sprite.body.angularVelocity = -300;
+    player.body.angularVelocity = -300;
   } else if (cursors.right.isDown) {
-    sprite.body.angularVelocity = 300;
+    player.body.angularVelocity = 300;
   } else {
-    sprite.body.angularVelocity = 0;
+    player.body.angularVelocity = 0;
   }
 
   if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
     fireBullet();
   }
 
-  screenWrap(sprite);
+  screenWrap(player);
 
   bullets.forEachExists(screenWrap, this);
+
+  asteroids.forEachExists(screenWrap, this);
+
+  game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
+  game.physics.arcade.collide(asteroids, asteroids);
 }
 
 function fireBullet() {
@@ -109,11 +117,11 @@ function fireBullet() {
     bullet = bullets.getFirstExists(false);
 
     if (bullet) {
-      bullet.reset(sprite.body.x + 16, sprite.body.y + 16);
+      bullet.reset(player.body.x + 16, player.body.y + 16);
       bullet.lifespan = 2000;
-      bullet.rotation = sprite.rotation;
+      bullet.rotation = player.rotation;
       game.physics.arcade.velocityFromRotation(
-        sprite.rotation,
+        player.rotation,
         400,
         bullet.body.velocity
       );
@@ -122,18 +130,25 @@ function fireBullet() {
   }
 }
 
-function screenWrap(sprite) {
-  if (sprite.x < 0) {
-    sprite.x = game.width;
-  } else if (sprite.x > game.width) {
-    sprite.x = 0;
+function screenWrap(player) {
+  if (player.x < 0) {
+    player.x = game.width;
+  } else if (player.x > game.width) {
+    player.x = 0;
   }
 
-  if (sprite.y < 0) {
-    sprite.y = game.height;
-  } else if (sprite.y > game.height) {
-    sprite.y = 0;
+  if (player.y < 0) {
+    player.y = game.height;
+  } else if (player.y > game.height) {
+    player.y = 0;
   }
 }
 
-function render() {}
+function render() {
+  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 20);
+}
+
+function onAsteroidPlayerCollision(asteroid, player) {
+
+  playerHealth -= 0.1;
+}
