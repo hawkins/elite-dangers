@@ -75,6 +75,8 @@ function update() {
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
 
+    asteroid.health = game.rnd.integerInRange(1, 6);
+
     // Get the next one
     var asteroid = asteroids.getFirstExists(false);
   }
@@ -109,6 +111,7 @@ function update() {
   asteroids.forEachExists(screenWrap, this);
 
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
+  game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
   game.physics.arcade.collide(asteroids, asteroids);
 }
 
@@ -149,6 +152,16 @@ function render() {
 }
 
 function onAsteroidPlayerCollision(asteroid, player) {
-
   playerHealth -= 0.1;
+}
+
+function onAsteroidBulletCollision(asteroid, bullet) {
+  bullet.kill();
+  // TODO: Play sound here
+
+  asteroid.health--;
+
+  if (asteroid.health <= 0) {
+    asteroid.kill();
+  }
 }
