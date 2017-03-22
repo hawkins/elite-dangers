@@ -29,6 +29,7 @@ var bulletTime = 0;
 var asteroids;
 
 var enemies;
+const maxRotationDiff = 0.0174533;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -126,16 +127,35 @@ function update() {
 
   // Enemies face player
   enemies.forEachExists(enemy => {
-    // Steer toward player
-    const maxRotationDiff = 0.0174533;
-    const idealRotation = game.physics.arcade.angleBetween(enemy, player);
+    // Find closest wrapped location
+    var wrapX;
+    var wrapY;
+    if (enemy.x > player.x) wrapX = player.x + game.width;
+    else wrapX = player.x - game.width;
+    if (enemy.y > player.y) wrapY = player.y + game.height;
+    else wrapY = player.y - game.height;
+
+    const points = [{x: player.x, y: player.y}, {x: wrapX, y: player.y}, {x: player.x, y: wrapY}];
+    var closest = {x: player.x, y: player.y};
+    var closestDistance = game.physics.arcade.distanceBetween(enemy, closest);
+    points.forEach(point => {
+      const distance = game.physics.arcade.distanceBetween(enemy, point);
+      if (distance < closestDistance) {
+        closest = point;
+        closestDistance = distance;
+      }
+    });
+
+    idealRotation = game.physics.arcade.angleBetween(enemy, closest);
+
     if (idealRotation > enemy.rotation + maxRotationDiff)
       enemy.rotation += maxRotationDiff;
     else if (idealRotation < enemy.rotation - maxRotationDiff)
       enemy.rotation -= maxRotationDiff;
-    else {
+    else
       enemy.rotation = idealRotation;
 
+    if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
       fireEnemyBullet(enemy);
     }
 
