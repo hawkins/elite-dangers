@@ -1,4 +1,4 @@
-var game = new Phaser.Game(800, 600, Phaser.CANVAS, "phaser-example", {
+var game = new Phaser.Game(1200, 800, Phaser.CANVAS, "phaser-example", {
   preload: preload,
   create: create,
   update: update,
@@ -17,6 +17,7 @@ function preload() {
 }
 
 var playerHealth = 10;
+var score = 0;
 
 var player;
 var cursors;
@@ -170,7 +171,7 @@ function update() {
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
       player.rotation,
-      200,
+      300,
       player.body.acceleration
     );
   } else {
@@ -238,7 +239,8 @@ function screenWrap(player) {
 }
 
 function render() {
-  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 20);
+  game.debug.text(`Score: ${score}`, 10, 20);
+  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 40);
 }
 
 function onAsteroidPlayerCollision(asteroid, player) {
@@ -284,6 +286,7 @@ function onEnemyBulletCollision(enemy, bullet) {
 
   if (enemy.health <= 0) {
     // TODO: Play sound here
+    score += 1;
     enemy.kill();
   }
 }
