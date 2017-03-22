@@ -8,6 +8,7 @@ var game = new Phaser.Game(800, 600, Phaser.CANVAS, "phaser-example", {
 function preload() {
   game.load.image("space", "assets/deep-space.jpg");
   game.load.image("bullet", "assets/bullets.png");
+  game.load.image("enemybullet", "assets/enemybullets.png");
   game.load.image("ship", "assets/ship.png");
   game.load.image("enemyship", "assets/enemy-ship.png");
   game.load.image("asteroid1", "assets/asteroid1.png");
@@ -22,6 +23,7 @@ var cursors;
 
 var bullet;
 var bullets;
+var enemyBullets;
 var bulletTime = 0;
 
 var asteroids;
@@ -41,9 +43,9 @@ function create() {
   asteroids = game.add.group();
   asteroids.enableBody = true;
   asteroids.physicsBodyType = Phaser.Physics.ARCADE;
-  asteroids.createMultiple(10, "asteroid1");
-  asteroids.createMultiple(10, "asteroid2");
-  asteroids.createMultiple(10, "asteroid3");
+  asteroids.createMultiple(3, "asteroid1");
+  asteroids.createMultiple(3, "asteroid2");
+  asteroids.createMultiple(3, "asteroid3");
   asteroids.setAll("anchor.x", 0.5);
   asteroids.setAll("anchor.y", 0.5);
 
@@ -51,9 +53,12 @@ function create() {
   enemies = game.add.group();
   enemies.enableBody = true;
   enemies.physicsBodyType = Phaser.Physics.ARCADE;
-  enemies.createMultiple(10, "enemyship");
+  enemies.createMultiple(5, "enemyship");
   enemies.setAll("anchor.x", 0.5);
   enemies.setAll("anchor.y", 0.5);
+  enemies.forEach(enemy => {
+    enemy.bulletTime = game.time.now + 100;
+  });
 
   // Player bullets
   bullets = game.add.group();
@@ -62,6 +67,14 @@ function create() {
   bullets.createMultiple(40, "bullet");
   bullets.setAll("anchor.x", 0.5);
   bullets.setAll("anchor.y", 0.5);
+
+  // Enemy bullets
+  enemyBullets = game.add.group();
+  enemyBullets.enableBody = true;
+  enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+  enemyBullets.createMultiple(40, "enemybullet");
+  enemyBullets.setAll("anchor.x", 0.5);
+  enemyBullets.setAll("anchor.y", 0.5);
 
   // Player
   player = game.add.sprite(300, 300, "ship");
@@ -111,6 +124,28 @@ function update() {
     var enemy = enemies.getFirstExists(false);
   }
 
+  // Enemies face player
+  enemies.forEachExists(enemy => {
+    // Steer toward player
+    const maxRotationDiff = 0.0174533;
+    const idealRotation = game.physics.arcade.angleBetween(enemy, player);
+    if (idealRotation > enemy.rotation + maxRotationDiff)
+      enemy.rotation += maxRotationDiff;
+    else if (idealRotation < enemy.rotation - maxRotationDiff)
+      enemy.rotation -= maxRotationDiff;
+    else {
+      enemy.rotation = idealRotation;
+
+      fireEnemyBullet(enemy);
+    }
+
+    game.physics.arcade.velocityFromRotation(
+      enemy.rotation,
+      200,
+      enemy.body.velocity
+    );
+  });
+
   // Player movement
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
@@ -137,13 +172,17 @@ function update() {
   screenWrap(player);
   bullets.forEachExists(screenWrap, this);
   asteroids.forEachExists(screenWrap, this);
+  enemies.forEachExists(screenWrap, this);
+  enemyBullets.forEachExists(screenWrap, this);
 
   game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
   game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
+  game.physics.arcade.overlap(asteroids, enemyBullets, onAsteroidBulletCollision);
   game.physics.arcade.collide(asteroids, enemies, onAsteroidEnemyCollision);
   game.physics.arcade.collide(player, enemies, onPlayerEnemyCollision);
   game.physics.arcade.overlap(enemies, bullets, onEnemyBulletCollision);
+  game.physics.arcade.overlap(player, enemyBullets, onPlayerEnemyBulletCollision);
 }
 
 function fireBullet() {
@@ -226,6 +265,29 @@ function onEnemyBulletCollision(enemy, bullet) {
   if (enemy.health <= 0) {
     // TODO: Play sound here
     enemy.kill();
+  }
+}
+
+function onPlayerEnemyBulletCollision(player, bullet) {
+  playerHealth -= 1;
+  bullet.kill();
+}
+
+function fireEnemyBullet(enemy) {
+  if (game.time.now > enemy.bulletTime) {
+    bullet = enemyBullets.getFirstExists(false);
+
+    if (bullet) {
+      bullet.reset(enemy.body.x + 16, enemy.body.y + 16);
+      bullet.lifespan = 2000;
+      bullet.rotation = enemy.rotation;
+      game.physics.arcade.velocityFromRotation(
+        enemy.rotation,
+        400,
+        bullet.body.velocity
+      );
+      enemy.bulletTime = game.time.now + 3000;
+    }
   }
 }
 
