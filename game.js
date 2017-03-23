@@ -70,6 +70,40 @@ const italicStyle = {
   fontStyle: "italic"
 };
 
+var storyMusic;
+var battleMusic;
+var victoryMusic;
+var gameOverMusic;
+
+const maxPlayerHealth = 100;
+var playerHealth = maxPlayerHealth;
+var reinforcements = 100;
+
+var player;
+var cursors;
+
+var explosions;
+var bullet;
+var bullets;
+var enemyBullets;
+var bulletTime = 0;
+
+var asteroids;
+
+var enemies;
+const maxRotationDiff = 0.0174533;
+
+var text;
+var dialogueIndex = 0;
+var lineIndex = -1;
+var line = "";
+var firstUpdate = true;
+
+// State controls
+var enemiesInvading = false;
+var enemiesHaveInvaded = false;
+var gameOver = false;
+
 function preload() {
   game.load.image("space", "assets/deep-space.jpg");
   game.load.image("bullet", "assets/bullets.png");
@@ -99,38 +133,10 @@ function preload() {
   );
   game.load.spritesheet("explosion", "assets/explosion.png", 64, 64);
   game.load.audio("story", "assets/story.ogg");
+  game.load.audio("battle", "assets/battle.mp3");
+  game.load.audio("victory", "assets/victory.mp3");
+  game.load.audio("gameover", "assets/gameover.mp3");
 }
-
-var storyMusic;
-
-const maxPlayerHealth = 100;
-var playerHealth = maxPlayerHealth;
-var reinforcements = 150;
-
-var player;
-var cursors;
-
-var explosions;
-var bullet;
-var bullets;
-var enemyBullets;
-var bulletTime = 0;
-
-var asteroids;
-
-var enemies;
-const maxRotationDiff = 0.0174533;
-
-var text;
-var dialogueIndex = 0;
-var lineIndex = -1;
-var line = "";
-var firstUpdate = true;
-
-// State controls
-var enemiesInvading = false;
-var enemiesHaveInvaded = false;
-var gameOver = false;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -143,6 +149,9 @@ function create() {
 
   // Music
   storyMusic = game.add.audio("story");
+  battleMusic = game.add.audio("battle");
+  victoryMusic = game.add.audio("victory");
+  gameOverMusic = game.add.audio("gameover");
   storyMusic.play(null, null, 1, true);
 
   // Asteroids
@@ -456,6 +465,8 @@ function onAsteroidBulletCollision(asteroid, bullet) {
     setTimeout(
       () => {
         enemiesInvading = true;
+        storyMusic.stop();
+        battleMusic.play(null, null, 1, true);
       },
       2000
     );
@@ -535,6 +546,10 @@ function hurtPlayer(damage) {
       lineIndex = -1;
       text.setText(line);
       nextLine();
+
+      // Play defeat music
+      battleMusic.stop();
+      gameOverMusic.play();
     }
   }
 }
@@ -557,6 +572,13 @@ function hurtEnemy(enemy, damage) {
       lineIndex = -1;
       text.setText(line);
       nextLine();
+
+      // Play victory music
+      battleMusic.stop();
+      victoryMusic.play();
+      setTimeout(() => {
+        storyMusic.play(null, null, 1, true);
+      }, 11000);
     }
 
     var explosion = explosions.getFirstExists(false);
