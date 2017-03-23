@@ -23,7 +23,7 @@ const dialogue = [
     "You: Jeez... what just happened?",
     "Where... am I?",
     "Ship's in bad shape...",
-    "Wait... how? I don't even remember any combat...",
+    "Wait... how? I can't remember anything...",
     "   ",
     "Jeez, this headache...",
     "   ",
@@ -38,6 +38,8 @@ const dialogue = [
   ],
   [
     "<i>Engines are failing!",
+    "???: Take that, pirate scum!!",
+    "???: All units, return to base!",
     "<i>The world will never know...",
     "<i>what really happened to you.",
     " ",
@@ -522,6 +524,11 @@ function hurtPlayer(damage) {
         player.kill();
       }
 
+      // End game after a few seconds
+      setTimeout(() => {
+        gameOver = true;
+      }, 7000);
+
       // Play defeat dialogue
       dialogueIndex = 2;
       line = "";
@@ -588,7 +595,7 @@ function nextLine() {
       text.setStyle(style);
     }
     game.time.events.repeat(
-      60,
+      50,
       dialogue[dialogueIndex][lineIndex].length + 1,
       updateLine,
       this
