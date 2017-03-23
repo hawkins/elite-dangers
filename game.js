@@ -31,7 +31,10 @@ const dialogue = [ [
   ],
   [
     "<i>Engines are failing!",
-    "You: Wha -- No, no, NO!!"
+    "<i>The world will never know...",
+    "What really happened here.",
+    "...",
+    ""
   ]
 ];
 
@@ -56,7 +59,7 @@ function preload() {
 
 var storyMusic;
 
-var playerHealth = 10;
+var playerHealth = 100;
 var score = 0;
 
 var player;
@@ -93,7 +96,7 @@ function create() {
 
   // Music
   storyMusic = game.add.audio('story');
-  storyMusic.play();
+  storyMusic.play(null, null, 1, true);
 
   // Asteroids
   asteroids = game.add.group();
@@ -265,6 +268,16 @@ function update() {
     }
   });
 
+  // Story
+  if (dialogueIndex === 1 && lineIndex > 2 && (cursors.up.isDown || cursors.left.isDown || cursors.right.isDown || cursors.left.isDown)) {
+    // Begin normal game
+    enemiesHaveInvaded = true;
+
+    // Reset text
+    line = "";
+    text.setText(line);
+  }
+
   // Player movement
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
@@ -383,8 +396,8 @@ function onEnemyBulletCollision(enemy, bullet) {
 }
 
 function onPlayerEnemyBulletCollision(player, bullet) {
-  hurtPlayer(1);
   bullet.kill();
+  hurtPlayer(1);
 }
 
 function fireEnemyBullet(enemy) {
@@ -413,16 +426,17 @@ function healPlayer(health) {
 }
 
 function hurtPlayer(damage) {
-  if (dialogueIndex > 0) {
+  if (dialogueIndex >= 1) {
     playerHealth -= damage;
 
     if (playerHealth <= 0) {
       explosion = explosions.getFirstExists(false);
       if (explosion) {
         explosion.reset(player.x, player.y);
-        explosion.play('explode', false, true);
+        explosion.play('explode', 15, false, true);
         player.kill();
       }
+
       // Play game over dialogue
       dialogueIndex = 2;
       line = "";
@@ -458,7 +472,7 @@ function hurtAsteroid(asteroid, damage) {
 
     asteroid.play(asteroid.key, 30, false, true);
 
-    healPlayer(1);
+    healPlayer(5);
   }
 }
 
@@ -473,7 +487,7 @@ function nextLine() {
     } else {
       text.setStyle(style);
     }
-    game.time.events.repeat(80, dialogue[dialogueIndex][lineIndex].length + 1, updateLine, this);
+    game.time.events.repeat(60, dialogue[dialogueIndex][lineIndex].length + 1, updateLine, this);
   }
 }
 
