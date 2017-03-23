@@ -27,7 +27,7 @@ const dialogue = [
     "   ",
     "Jeez, this headache...",
     "   ",
-    "Shit, warp drive's down...",
+    "Shit, engine's down...",
     "Better get some ore to repair it.",
     "<i>Press (SPACE) to shoot at the asteroid."
   ],
@@ -39,9 +39,18 @@ const dialogue = [
   [
     "<i>Engines are failing!",
     "<i>The world will never know...",
-    "What really happened here.",
-    "...",
-    ""
+    "<i>what really happened to you.",
+    " ",
+    "<i>Game Over"
+  ],
+  [
+    "???: HE'S TOO STRONG!! RETREAT!!",
+    "???: All units, fall back!",
+    " ",
+    "You: Who... were those things?",
+    "Guess we'll never know...",
+    " ",
+    "<i>Congratulations!"
   ]
 ];
 
@@ -94,7 +103,7 @@ var storyMusic;
 
 const maxPlayerHealth = 100;
 var playerHealth = maxPlayerHealth;
-var score = 0;
+var reinforcements = 150;
 
 var player;
 var cursors;
@@ -116,8 +125,10 @@ var lineIndex = -1;
 var line = "";
 var firstUpdate = true;
 
+// State controls
 var enemiesInvading = false;
 var enemiesHaveInvaded = false;
+var gameOver = false;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -152,6 +163,8 @@ function create() {
   enemies.createMultiple(5, "enemyship");
   enemies.setAll("anchor.x", 0.5);
   enemies.setAll("anchor.y", 0.5);
+  enemies.setAll("body.drag", 100);
+  enemies.setAll("maxVelocity", 100);
   enemies.forEach(enemy => {
     enemy.bulletTime = game.time.now + 100;
   });
@@ -223,7 +236,7 @@ function update() {
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
 
-    asteroid.health = game.rnd.integerInRange(1, 6);
+    asteroid.health = game.rnd.integerInRange(1, 10);
 
     // Get the next one
     asteroid = asteroids.getFirstExists(false);
@@ -261,48 +274,62 @@ function update() {
 
   // Enemies face player
   enemies.forEachExists(enemy => {
-    // Find closest wrapped location
-    var wrapX;
-    var wrapY;
-    if (enemy.x > player.x) wrapX = player.x + game.width;
-    else wrapX = player.x - game.width;
-    if (enemy.y > player.y) wrapY = player.y + game.height;
-    else wrapY = player.y - game.height;
-
-    const points = [
-      { x: player.x, y: player.y },
-      { x: wrapX, y: player.y },
-      { x: player.x, y: wrapY }
-    ];
-    var closest = { x: player.x, y: player.y };
-    var closestDistance = game.physics.arcade.distanceBetween(enemy, closest);
-    points.forEach(point => {
-      const distance = game.physics.arcade.distanceBetween(enemy, point);
-      if (distance < closestDistance) {
-        closest = point;
-        closestDistance = distance;
-      }
-    });
-
-    idealRotation = game.physics.arcade.angleBetween(enemy, closest);
-
-    if (idealRotation > enemy.rotation + maxRotationDiff)
-      enemy.rotation += maxRotationDiff;
-    else if (idealRotation < enemy.rotation - maxRotationDiff)
-      enemy.rotation -= maxRotationDiff;
-    else
-      enemy.rotation = idealRotation;
-
-    if (enemiesHaveInvaded) {
-      if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
-        fireEnemyBullet(enemy);
-      }
-
+    if (gameOver) {
+      // Retreat behavior
+      enemy.rotation = game.physics.arcade.angleBetween(enemy, {
+        x: enemy.x,
+        y: game.height + 100
+      });
       game.physics.arcade.velocityFromRotation(
         enemy.rotation,
         200,
         enemy.body.velocity
       );
+    } else {
+      // Regular behavior
+      // Find closest wrapped location
+      var wrapX;
+      var wrapY;
+      if (enemy.x > player.x) wrapX = player.x + game.width;
+      else wrapX = player.x - game.width;
+      if (enemy.y > player.y) wrapY = player.y + game.height;
+      else wrapY = player.y - game.height;
+
+      const points = [
+        { x: player.x, y: player.y },
+        { x: wrapX, y: player.y },
+        { x: player.x, y: wrapY }
+      ];
+      var closest = { x: player.x, y: player.y };
+      var closestDistance = game.physics.arcade.distanceBetween(enemy, closest);
+      points.forEach(point => {
+        const distance = game.physics.arcade.distanceBetween(enemy, point);
+        if (distance < closestDistance) {
+          closest = point;
+          closestDistance = distance;
+        }
+      });
+
+      idealRotation = game.physics.arcade.angleBetween(enemy, closest);
+
+      if (idealRotation > enemy.rotation + maxRotationDiff)
+        enemy.rotation += maxRotationDiff;
+      else if (idealRotation < enemy.rotation - maxRotationDiff)
+        enemy.rotation -= maxRotationDiff;
+      else
+        enemy.rotation = idealRotation;
+
+      if (enemiesHaveInvaded) {
+        if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
+          fireEnemyBullet(enemy);
+        }
+
+        game.physics.arcade.velocityFromRotation(
+          enemy.rotation,
+          200,
+          enemy.body.velocity
+        );
+      }
     }
   });
 
@@ -349,8 +376,8 @@ function update() {
   screenWrap(player);
   bullets.forEachExists(screenWrap, this);
   asteroids.forEachExists(screenWrap, this);
-  enemies.forEachExists(screenWrap, this);
   enemyBullets.forEachExists(screenWrap, this);
+  if (!gameOver) enemies.forEachExists(screenWrap, this);
 
   game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
@@ -371,7 +398,7 @@ function update() {
 }
 
 function render() {
-  game.debug.text(`Score: ${score}`, 10, 20);
+  game.debug.text(`Enemy reinforcements: ${reinforcements}`, 10, 20);
   game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 40);
 }
 
@@ -486,6 +513,8 @@ function hurtPlayer(damage) {
     playerHealth -= damage;
 
     if (playerHealth <= 0) {
+      playerHealth = 0;
+
       explosion = explosions.getFirstExists(false);
       if (explosion) {
         explosion.reset(player.x, player.y);
@@ -493,7 +522,7 @@ function hurtPlayer(damage) {
         player.kill();
       }
 
-      // Play game over dialogue
+      // Play defeat dialogue
       dialogueIndex = 2;
       line = "";
       lineIndex = -1;
@@ -508,7 +537,20 @@ function hurtEnemy(enemy, damage) {
 
   if (enemy.health <= 0) {
     // TODO: Play sound here
-    score += 1;
+    reinforcements -= 1;
+
+    // If game just finished
+    if (reinforcements <= 0 && !gameOver) {
+      reinforcements = 0;
+      gameOver = true;
+
+      // Play victory dialogue
+      dialogueIndex = 3;
+      line = "";
+      lineIndex = -1;
+      text.setText(line);
+      nextLine();
+    }
 
     var explosion = explosions.getFirstExists(false);
     if (explosion) {
@@ -528,7 +570,7 @@ function hurtAsteroid(asteroid, damage) {
 
     asteroid.play(asteroid.key, 30, false, true);
 
-    healPlayer(2);
+    healPlayer(1);
   }
 }
 
