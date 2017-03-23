@@ -1,9 +1,43 @@
-var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, "phaser-example", {
-  preload: preload,
+var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, "root", {
   create: create,
   update: update,
-  render: render
+  render: render,
+  preload: preload
 });
+
+const dialogue = [ [
+    "   ",
+    "Josh Hawkins presents",
+    " ",
+    " ",
+    " ",
+    " ",
+    "Elite Dangers",
+    " ",
+    "You: Jeez... what just happened?",
+    "Where... am I?",
+    "Ship's in bad shape...",
+    "Wait... how? I don't even remember any combat...",
+    "   ",
+    "Jeez, this headache...",
+    "   ",
+    "Shit, warp drive's down...",
+    "Better get some ore to repair it.",
+    "<i>Press (SPACE) to shoot at the asteroid."
+  ],
+  [
+    "???: THERE HE IS!! Destroy him!",
+    "You: Great... let's hope this damn engine still works!",
+    "<i>Steer with (A), (D), throttle with (W), (S)."
+  ],
+  [
+    "<i>Engines are failing!",
+    "You: Wha -- No, no, NO!!"
+  ]
+];
+
+const style = { font: "30pt Courier", fill: "#19cb65", stroke: "#119f4e", strokeThickness: 2 };
+const italicStyle = { font: "30pt Courier", fill: "#19cb65", stroke: "#119f4e", strokeThickness: 2, fontStyle: 'italic' };
 
 function preload() {
   game.load.image("space", "assets/deep-space.jpg");
@@ -36,6 +70,15 @@ var asteroids;
 
 var enemies;
 const maxRotationDiff = 0.0174533;
+
+var text;
+var dialogueIndex = 0;
+var lineIndex = 0;
+var line = '';
+var firstUpdate = true;
+
+var enemiesInvading = false;
+var enemiesHaveInvaded = false;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -95,12 +138,17 @@ function create() {
   enemyBullets.setAll("anchor.y", 0.5);
 
   // Player
-  player = game.add.sprite(300, 300, "ship");
+  player = game.add.sprite(game.width / 2, game.height / 1.5, "ship");
+  player.angle = 270;
   player.anchor.set(0.5);
   game.physics.enable(player, Phaser.Physics.ARCADE);
 
   player.body.drag.set(100);
   player.body.maxVelocity.set(200);
+
+  // Dialogue text
+  text = game.add.text(32, game.height - 100, '', style);
+  nextLine();
 
   // Game input
   cursors = game.input.keyboard.createCursorKeys();
@@ -108,8 +156,19 @@ function create() {
 }
 
 function update() {
-  // Asteroid movement
+  // Update asteroids
   var asteroid = asteroids.getFirstExists(false);
+
+  if (firstUpdate) {
+    // Spawn first asteroid for story
+    asteroid.reset(game.width / 2, game.height / 2.5);
+    asteroid.angle = game.rnd.integerInRange(0, 360);
+    asteroid = asteroids.getFirstExists(false);
+    asteroid.health = 1;
+
+    firstUpdate = false;
+  }
+
   while (asteroid) {
     // Randomly place asteroids
     asteroid.reset(
@@ -124,23 +183,37 @@ function update() {
     asteroid.health = game.rnd.integerInRange(1, 6);
 
     // Get the next one
-    var asteroid = asteroids.getFirstExists(false);
+    asteroid = asteroids.getFirstExists(false);
   }
 
   // Enemy movement
   var enemy = enemies.getFirstExists(false);
   while (enemy) {
-    // Randomly place asteroids
-    enemy.reset(
-      game.rnd.integerInRange(game.world.width, 0),
-      game.rnd.integerInRange(game.world.height, 0)
-    );
-    enemy.angle = game.rnd.integerInRange(0, 360);
+    if (enemiesInvading) {
+      // Spawn 5, have them slide up map a bit, while looking at player
+      for (var i = 1; i < 6; i++ ) {
+        enemy.reset(game.width * 0.1667 * i, game.height);
+        enemy.rotation = game.physics.arcade.angleBetween(enemy, player);
+        enemy.body.velocity.y = -50;
+        enemy = enemies.getFirstExists(false);
+      }
 
-    enemy.health = game.rnd.integerInRange(1, 20);
+      enemiesInvading = false;
+    } else if (enemiesHaveInvaded) {
+      // Regular behavior
+      enemy.reset(
+        game.rnd.integerInRange(game.world.width, 0),
+        game.rnd.integerInRange(game.world.height, 0)
+      );
+      enemy.angle = game.rnd.integerInRange(0, 360);
 
-    // Get the next one
-    var enemy = enemies.getFirstExists(false);
+      enemy.health = game.rnd.integerInRange(1, 20);
+
+      // Get the next one
+      enemy = enemies.getFirstExists(false);
+    } else {
+      break;
+    }
   }
 
   // Enemies face player
@@ -173,15 +246,17 @@ function update() {
     else
       enemy.rotation = idealRotation;
 
-    if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
-      fireEnemyBullet(enemy);
-    }
+    if (enemiesHaveInvaded) {
+      if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
+        fireEnemyBullet(enemy);
+      }
 
-    game.physics.arcade.velocityFromRotation(
-      enemy.rotation,
-      200,
-      enemy.body.velocity
-    );
+      game.physics.arcade.velocityFromRotation(
+        enemy.rotation,
+        200,
+        enemy.body.velocity
+      );
+    }
   });
 
   // Player movement
@@ -216,7 +291,7 @@ function update() {
   game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
   game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
-  game.physics.arcade.overlap(asteroids, enemyBullets, onAsteroidBulletCollision);
+  game.physics.arcade.overlap(asteroids, enemyBullets, onAsteroidEnemyBulletCollision);
   game.physics.arcade.collide(asteroids, enemies, onAsteroidEnemyCollision);
   game.physics.arcade.collide(player, enemies, onPlayerEnemyCollision);
   game.physics.arcade.overlap(enemies, bullets, onEnemyBulletCollision);
@@ -265,18 +340,22 @@ function onAsteroidPlayerCollision(asteroid, player) {
 }
 
 function onAsteroidBulletCollision(asteroid, bullet) {
-  bullet.kill();
   // TODO: Play sound here
+  hurtAsteroid(asteroid, 1);
+  bullet.kill();
 
-  asteroid.health--;
-
-  if (asteroid.health <= 0) {
-    // TODO: Play sound here
-
-    asteroid.play(asteroid.key, 30, false, true);
-
-    healPlayer(1);
+  if (dialogueIndex === 0 && lineIndex >= 14) {
+    text.setText("");
+    line = "";
+    dialogueIndex = 1;
+    lineIndex = -1;
+    nextLine();
   }
+}
+
+function onAsteroidEnemyBulletCollision(asteroid, bullet) {
+  hurtAsteroid(asteroid, 1);
+  bullet.kill();
 }
 
 function onAsteroidEnemyCollision(asteroid, enemy) {
@@ -323,7 +402,24 @@ function healPlayer(health) {
 }
 
 function hurtPlayer(damage) {
-  playerHealth -= damage;
+  if (dialogueIndex > 0) {
+    playerHealth -= damage;
+
+    if (playerHealth <= 0) {
+      explosion = explosions.getFirstExists(false);
+      if (explosion) {
+        explosion.reset(player.x, player.y);
+        explosion.play('explode', false, true);
+        player.kill();
+      }
+      // Play game over dialogue
+      dialogueIndex = 2;
+      line = "";
+      lineIndex = -1;
+      text.setText(line);
+      nextLine();
+    }
+  }
 }
 
 function hurtEnemy(enemy, damage) {
@@ -340,5 +436,41 @@ function hurtEnemy(enemy, damage) {
     }
 
     enemy.kill();
+  }
+}
+
+function hurtAsteroid(asteroid, damage) {
+  asteroid.health -= damage;
+
+  if (asteroid.health <= 0) {
+    // TODO: Play sound here
+
+    asteroid.play(asteroid.key, 30, false, true);
+
+    healPlayer(1);
+  }
+}
+
+function nextLine() {
+  lineIndex++;
+
+  if (lineIndex < dialogue[dialogueIndex].length) {
+    line = '';
+    if (dialogue[dialogueIndex][lineIndex].startsWith('<i>')) {
+      dialogue[dialogueIndex][lineIndex] = dialogue[dialogueIndex][lineIndex].substr(3)
+      text.setStyle(italicStyle);
+    } else {
+      text.setStyle(style);
+    }
+    game.time.events.repeat(80, dialogue[dialogueIndex][lineIndex].length + 1, updateLine, this);
+  }
+}
+
+function updateLine() {
+  if (dialogue[dialogueIndex][lineIndex] && line.length < dialogue[dialogueIndex][lineIndex].length) {
+    line = dialogue[dialogueIndex][lineIndex].substr(0, line.length + 1);
+    text.setText(line);
+  } else {
+    game.time.events.add(Phaser.Timer.SECOND * 2, nextLine, this);
   }
 }
