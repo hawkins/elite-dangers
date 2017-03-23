@@ -6,9 +6,8 @@ var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS,
 });
 
 const dialogue = [ [
-    "   ",
-    "Josh Hawkins presents",
     " ",
+    "Josh Hawkins presents",
     " ",
     " ",
     " ",
@@ -52,7 +51,10 @@ function preload() {
   game.load.spritesheet("asteroid2_destroy", "assets/asteroid2_destroy.png", 32, 32);
   game.load.spritesheet("asteroid3_destroy", "assets/asteroid3_destroy.png", 32, 32);
   game.load.spritesheet("explosion", "assets/explosion.png", 64, 64);
+  game.load.audio("story", "assets/story.ogg");
 }
+
+var storyMusic;
 
 var playerHealth = 10;
 var score = 0;
@@ -73,7 +75,7 @@ const maxRotationDiff = 0.0174533;
 
 var text;
 var dialogueIndex = 0;
-var lineIndex = 0;
+var lineIndex = -1;
 var line = '';
 var firstUpdate = true;
 
@@ -86,8 +88,12 @@ function create() {
 
   game.physics.startSystem(Phaser.Physics.ARCADE);
 
-  // Bakground
+  // Background
   game.add.tileSprite(0, 0, game.width, game.height, "space");
+
+  // Music
+  storyMusic = game.add.audio('story');
+  storyMusic.play();
 
   // Asteroids
   asteroids = game.add.group();
@@ -350,6 +356,11 @@ function onAsteroidBulletCollision(asteroid, bullet) {
     dialogueIndex = 1;
     lineIndex = -1;
     nextLine();
+
+    // Allow enemies to invade in a few seconds
+    setTimeout(() => {
+      enemiesInvading = true;
+    }, 2000);
   }
 }
 
