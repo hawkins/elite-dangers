@@ -1,14 +1,21 @@
-var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, "root", {
-  create: create,
-  update: update,
-  render: render,
-  preload: preload
-});
+var game = new Phaser.Game(
+  window.innerWidth,
+  window.innerHeight,
+  Phaser.CANVAS,
+  "root",
+  {
+    create: create,
+    update: update,
+    render: render,
+    preload: preload
+  }
+);
 
-const dialogue = [ [
+const dialogue = [
+  [
+    " ",
     " ",
     "Josh Hawkins presents",
-    " ",
     " ",
     " ",
     "Elite Dangers",
@@ -38,8 +45,19 @@ const dialogue = [ [
   ]
 ];
 
-const style = { font: "30pt Courier", fill: "#19cb65", stroke: "#119f4e", strokeThickness: 2 };
-const italicStyle = { font: "30pt Courier", fill: "#19cb65", stroke: "#119f4e", strokeThickness: 2, fontStyle: 'italic' };
+const style = {
+  font: "30pt Courier",
+  fill: "#19cb65",
+  stroke: "#119f4e",
+  strokeThickness: 2
+};
+const italicStyle = {
+  font: "30pt Courier",
+  fill: "#19cb65",
+  stroke: "#119f4e",
+  strokeThickness: 2,
+  fontStyle: "italic"
+};
 
 function preload() {
   game.load.image("space", "assets/deep-space.jpg");
@@ -50,16 +68,32 @@ function preload() {
   game.load.image("asteroid1", "assets/asteroid1.png");
   game.load.image("asteroid2", "assets/asteroid2.png");
   game.load.image("asteroid3", "assets/asteroid3.png");
-  game.load.spritesheet("asteroid1_destroy", "assets/asteroid1_destroy.png", 32, 32);
-  game.load.spritesheet("asteroid2_destroy", "assets/asteroid2_destroy.png", 32, 32);
-  game.load.spritesheet("asteroid3_destroy", "assets/asteroid3_destroy.png", 32, 32);
+  game.load.spritesheet(
+    "asteroid1_destroy",
+    "assets/asteroid1_destroy.png",
+    32,
+    32
+  );
+  game.load.spritesheet(
+    "asteroid2_destroy",
+    "assets/asteroid2_destroy.png",
+    32,
+    32
+  );
+  game.load.spritesheet(
+    "asteroid3_destroy",
+    "assets/asteroid3_destroy.png",
+    32,
+    32
+  );
   game.load.spritesheet("explosion", "assets/explosion.png", 64, 64);
   game.load.audio("story", "assets/story.ogg");
 }
 
 var storyMusic;
 
-var playerHealth = 100;
+const maxPlayerHealth = 100;
+var playerHealth = maxPlayerHealth;
 var score = 0;
 
 var player;
@@ -79,7 +113,7 @@ const maxRotationDiff = 0.0174533;
 var text;
 var dialogueIndex = 0;
 var lineIndex = -1;
-var line = '';
+var line = "";
 var firstUpdate = true;
 
 var enemiesInvading = false;
@@ -95,7 +129,7 @@ function create() {
   game.add.tileSprite(0, 0, game.width, game.height, "space");
 
   // Music
-  storyMusic = game.add.audio('story');
+  storyMusic = game.add.audio("story");
   storyMusic.play(null, null, 1, true);
 
   // Asteroids
@@ -125,10 +159,10 @@ function create() {
   // Explosions
   explosions = game.add.group();
   for (var i = 0; i < 50; i++)
-    explosions.create(0, 0, 'explosion', [ 0 ], false);
-  explosions.setAll('anchor.x', 0.5);
-  explosions.setAll('anchor.y', 0.5);
-  explosions.callAll('animations.add', 'animations', 'explode');
+    explosions.create(0, 0, "explosion", [0], false);
+  explosions.setAll("anchor.x", 0.5);
+  explosions.setAll("anchor.y", 0.5);
+  explosions.callAll("animations.add", "animations", "explode");
 
   // Player bullets
   bullets = game.add.group();
@@ -156,7 +190,7 @@ function create() {
   player.body.maxVelocity.set(200);
 
   // Dialogue text
-  text = game.add.text(32, game.height - 100, '', style);
+  text = game.add.text(32, game.height - 100, "", style);
   nextLine();
 
   // Game input
@@ -200,7 +234,7 @@ function update() {
   while (enemy) {
     if (enemiesInvading) {
       // Spawn 5, have them slide up map a bit, while looking at player
-      for (var i = 1; i < 6; i++ ) {
+      for (var i = 1; i < 6; i++) {
         enemy.reset(game.width * 0.1667 * i, game.height);
         enemy.rotation = game.physics.arcade.angleBetween(enemy, player);
         enemy.body.velocity.y = -50;
@@ -235,8 +269,12 @@ function update() {
     if (enemy.y > player.y) wrapY = player.y + game.height;
     else wrapY = player.y - game.height;
 
-    const points = [{x: player.x, y: player.y}, {x: wrapX, y: player.y}, {x: player.x, y: wrapY}];
-    var closest = {x: player.x, y: player.y};
+    const points = [
+      { x: player.x, y: player.y },
+      { x: wrapX, y: player.y },
+      { x: player.x, y: wrapY }
+    ];
+    var closest = { x: player.x, y: player.y };
     var closestDistance = game.physics.arcade.distanceBetween(enemy, closest);
     points.forEach(point => {
       const distance = game.physics.arcade.distanceBetween(enemy, point);
@@ -269,7 +307,14 @@ function update() {
   });
 
   // Story
-  if (dialogueIndex === 1 && lineIndex > 2 && (cursors.up.isDown || cursors.left.isDown || cursors.right.isDown || cursors.left.isDown)) {
+  if (
+    dialogueIndex === 1 &&
+    lineIndex > 2 &&
+    (cursors.up.isDown ||
+      cursors.left.isDown ||
+      cursors.right.isDown ||
+      cursors.left.isDown)
+  ) {
     // Begin normal game
     enemiesHaveInvaded = true;
 
@@ -310,11 +355,19 @@ function update() {
   game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
   game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
-  game.physics.arcade.overlap(asteroids, enemyBullets, onAsteroidEnemyBulletCollision);
+  game.physics.arcade.overlap(
+    asteroids,
+    enemyBullets,
+    onAsteroidEnemyBulletCollision
+  );
   game.physics.arcade.collide(asteroids, enemies, onAsteroidEnemyCollision);
   game.physics.arcade.collide(player, enemies, onPlayerEnemyCollision);
   game.physics.arcade.overlap(enemies, bullets, onEnemyBulletCollision);
-  game.physics.arcade.overlap(player, enemyBullets, onPlayerEnemyBulletCollision);
+  game.physics.arcade.overlap(
+    player,
+    enemyBullets,
+    onPlayerEnemyBulletCollision
+  );
 }
 
 function render() {
@@ -346,10 +399,10 @@ function fireBullet() {
       bullet.rotation = player.rotation;
       game.physics.arcade.velocityFromRotation(
         player.rotation,
-        400,
+        450,
         bullet.body.velocity
       );
-      bulletTime = game.time.now + 50;
+      bulletTime = game.time.now + 100;
     }
   }
 }
@@ -371,9 +424,12 @@ function onAsteroidBulletCollision(asteroid, bullet) {
     nextLine();
 
     // Allow enemies to invade in a few seconds
-    setTimeout(() => {
-      enemiesInvading = true;
-    }, 2000);
+    setTimeout(
+      () => {
+        enemiesInvading = true;
+      },
+      2000
+    );
   }
 }
 
@@ -420,8 +476,8 @@ function fireEnemyBullet(enemy) {
 
 function healPlayer(health) {
   playerHealth = health + playerHealth;
-  if (playerHealth > 10) {
-    playerHealth = 10;
+  if (playerHealth > maxPlayerHealth) {
+    playerHealth = maxPlayerHealth;
   }
 }
 
@@ -433,7 +489,7 @@ function hurtPlayer(damage) {
       explosion = explosions.getFirstExists(false);
       if (explosion) {
         explosion.reset(player.x, player.y);
-        explosion.play('explode', 15, false, true);
+        explosion.play("explode", 15, false, true);
         player.kill();
       }
 
@@ -457,7 +513,7 @@ function hurtEnemy(enemy, damage) {
     var explosion = explosions.getFirstExists(false);
     if (explosion) {
       explosion.reset(enemy.x, enemy.y);
-      explosion.play('explode', 30, false, true);
+      explosion.play("explode", 30, false, true);
     }
 
     enemy.kill();
@@ -472,7 +528,7 @@ function hurtAsteroid(asteroid, damage) {
 
     asteroid.play(asteroid.key, 30, false, true);
 
-    healPlayer(5);
+    healPlayer(2);
   }
 }
 
@@ -480,19 +536,29 @@ function nextLine() {
   lineIndex++;
 
   if (lineIndex < dialogue[dialogueIndex].length) {
-    line = '';
-    if (dialogue[dialogueIndex][lineIndex].startsWith('<i>')) {
-      dialogue[dialogueIndex][lineIndex] = dialogue[dialogueIndex][lineIndex].substr(3)
+    line = "";
+    if (dialogue[dialogueIndex][lineIndex].startsWith("<i>")) {
+      dialogue[dialogueIndex][lineIndex] = dialogue[dialogueIndex][
+        lineIndex
+      ].substr(3);
       text.setStyle(italicStyle);
     } else {
       text.setStyle(style);
     }
-    game.time.events.repeat(60, dialogue[dialogueIndex][lineIndex].length + 1, updateLine, this);
+    game.time.events.repeat(
+      60,
+      dialogue[dialogueIndex][lineIndex].length + 1,
+      updateLine,
+      this
+    );
   }
 }
 
 function updateLine() {
-  if (dialogue[dialogueIndex][lineIndex] && line.length < dialogue[dialogueIndex][lineIndex].length) {
+  if (
+    dialogue[dialogueIndex][lineIndex] &&
+    line.length < dialogue[dialogueIndex][lineIndex].length
+  ) {
     line = dialogue[dialogueIndex][lineIndex].substr(0, line.length + 1);
     text.setText(line);
   } else {
