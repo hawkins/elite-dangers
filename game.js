@@ -75,6 +75,11 @@ var battleMusic;
 var victoryMusic;
 var gameOverMusic;
 
+var enemyBulletSound;
+var playerBulletSound;
+var bulletHitSound;
+var explosionSound;
+
 const maxPlayerHealth = 100;
 var playerHealth = maxPlayerHealth;
 var reinforcements = 100;
@@ -136,6 +141,10 @@ function preload() {
   game.load.audio("battle", "assets/battle.mp3");
   game.load.audio("victory", "assets/victory.mp3");
   game.load.audio("gameover", "assets/gameover.mp3");
+  game.load.audio("enemyfire", "assets/enemyfire.wav");
+  game.load.audio("playerfire", "assets/playerfire.wav");
+  game.load.audio("explosion", "assets/explosion.mp3");
+  game.load.audio("bullethit", "assets/bullethit.wav");
 }
 
 function create() {
@@ -146,6 +155,12 @@ function create() {
 
   // Background
   game.add.tileSprite(0, 0, game.width, game.height, "space");
+
+  // Sound effects
+  enemyBulletSound = game.add.audio("enemyfire");
+  playerBulletSound = game.add.audio("playerfire");
+  explosionSound = game.add.audio("explosion");
+  bulletHitSound = game.add.audio("bullethit");
 
   // Music
   storyMusic = game.add.audio("story");
@@ -428,10 +443,14 @@ function screenWrap(player) {
 }
 
 function fireBullet() {
-  if (game.time.now > bulletTime) {
+  if (player.alive && game.time.now > bulletTime) {
     bullet = bullets.getFirstExists(false);
 
     if (bullet) {
+      // Play sound
+      playerBulletSound.play(null, null, 0.75);
+
+      // Create bullet
       bullet.reset(player.body.x + 16, player.body.y + 16);
       bullet.lifespan = 2000;
       bullet.rotation = player.rotation;
@@ -450,7 +469,9 @@ function onAsteroidPlayerCollision(asteroid, player) {
 }
 
 function onAsteroidBulletCollision(asteroid, bullet) {
-  // TODO: Play sound here
+  // Play sound here
+  bulletHitSound.play();
+
   hurtAsteroid(asteroid, 1);
   bullet.kill();
 
@@ -488,10 +509,16 @@ function onPlayerEnemyCollision(player, enemy) {
 }
 
 function onEnemyBulletCollision(enemy, bullet) {
+  // Play sound here
+  bulletHitSound.play();
+
   hurtEnemy(enemy, 1);
+
+  bullet.kill();
 }
 
 function onPlayerEnemyBulletCollision(player, bullet) {
+  // TODO: Play bullet hit player sound here
   bullet.kill();
   hurtPlayer(1);
 }
@@ -501,6 +528,10 @@ function fireEnemyBullet(enemy) {
     bullet = enemyBullets.getFirstExists(false);
 
     if (bullet) {
+      // Play sound
+      enemyBulletSound.play();
+
+      // Create bullet
       bullet.reset(enemy.body.x + 16, enemy.body.y + 16);
       bullet.lifespan = 2000;
       bullet.rotation = enemy.rotation;
@@ -522,7 +553,7 @@ function healPlayer(health) {
 }
 
 function hurtPlayer(damage) {
-  if (dialogueIndex >= 1) {
+  if (dialogueIndex >= 1 && reinforcements > 0) {
     playerHealth -= damage;
 
     if (playerHealth <= 0) {
@@ -558,7 +589,6 @@ function hurtEnemy(enemy, damage) {
   enemy.health -= damage;
 
   if (enemy.health <= 0) {
-    // TODO: Play sound here
     reinforcements -= 1;
 
     // If game just finished
@@ -581,6 +611,10 @@ function hurtEnemy(enemy, damage) {
       }, 11000);
     }
 
+    // Play sound here
+    explosionSound.play(null, null, 1.5);
+
+    // Create explosion
     var explosion = explosions.getFirstExists(false);
     if (explosion) {
       explosion.reset(enemy.x, enemy.y);
@@ -596,6 +630,7 @@ function hurtAsteroid(asteroid, damage) {
 
   if (asteroid.health <= 0) {
     // TODO: Play sound here
+    explosionSound.play();
 
     asteroid.play(asteroid.key, 30, false, true);
 
