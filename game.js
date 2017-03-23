@@ -1,4 +1,4 @@
-var game = new Phaser.Game(800, 600, Phaser.CANVAS, "phaser-example", {
+var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, "phaser-example", {
   preload: preload,
   create: create,
   update: update,
@@ -8,22 +8,34 @@ var game = new Phaser.Game(800, 600, Phaser.CANVAS, "phaser-example", {
 function preload() {
   game.load.image("space", "assets/deep-space.jpg");
   game.load.image("bullet", "assets/bullets.png");
+  game.load.image("enemybullet", "assets/enemybullets.png");
   game.load.image("ship", "assets/ship.png");
+  game.load.image("enemyship", "assets/enemy-ship.png");
   game.load.image("asteroid1", "assets/asteroid1.png");
   game.load.image("asteroid2", "assets/asteroid2.png");
   game.load.image("asteroid3", "assets/asteroid3.png");
+  game.load.spritesheet("asteroid1_destroy", "assets/asteroid1_destroy.png", 32, 32);
+  game.load.spritesheet("asteroid2_destroy", "assets/asteroid2_destroy.png", 32, 32);
+  game.load.spritesheet("asteroid3_destroy", "assets/asteroid3_destroy.png", 32, 32);
+  game.load.spritesheet("explosion", "assets/explosion.png", 64, 64);
 }
 
 var playerHealth = 10;
+var score = 0;
 
 var player;
 var cursors;
 
+var explosions;
 var bullet;
 var bullets;
+var enemyBullets;
 var bulletTime = 0;
 
 var asteroids;
+
+var enemies;
+const maxRotationDiff = 0.0174533;
 
 function create() {
   game.renderer.clearBeforeRender = false;
@@ -38,11 +50,33 @@ function create() {
   asteroids = game.add.group();
   asteroids.enableBody = true;
   asteroids.physicsBodyType = Phaser.Physics.ARCADE;
-  asteroids.createMultiple(10, "asteroid1");
-  asteroids.createMultiple(10, "asteroid2");
-  asteroids.createMultiple(10, "asteroid3");
+  asteroids.createMultiple(5, "asteroid1_destroy");
+  asteroids.createMultiple(5, "asteroid2_destroy");
+  asteroids.createMultiple(5, "asteroid3_destroy");
   asteroids.setAll("anchor.x", 0.5);
   asteroids.setAll("anchor.y", 0.5);
+  asteroids.callAll("animations.add", "animations", "asteroid1_destroy");
+  asteroids.callAll("animations.add", "animations", "asteroid2_destroy");
+  asteroids.callAll("animations.add", "animations", "asteroid3_destroy");
+
+  // Enemies
+  enemies = game.add.group();
+  enemies.enableBody = true;
+  enemies.physicsBodyType = Phaser.Physics.ARCADE;
+  enemies.createMultiple(5, "enemyship");
+  enemies.setAll("anchor.x", 0.5);
+  enemies.setAll("anchor.y", 0.5);
+  enemies.forEach(enemy => {
+    enemy.bulletTime = game.time.now + 100;
+  });
+
+  // Explosions
+  explosions = game.add.group();
+  for (var i = 0; i < 50; i++)
+    explosions.create(0, 0, 'explosion', [ 0 ], false);
+  explosions.setAll('anchor.x', 0.5);
+  explosions.setAll('anchor.y', 0.5);
+  explosions.callAll('animations.add', 'animations', 'explode');
 
   // Player bullets
   bullets = game.add.group();
@@ -51,6 +85,14 @@ function create() {
   bullets.createMultiple(40, "bullet");
   bullets.setAll("anchor.x", 0.5);
   bullets.setAll("anchor.y", 0.5);
+
+  // Enemy bullets
+  enemyBullets = game.add.group();
+  enemyBullets.enableBody = true;
+  enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+  enemyBullets.createMultiple(40, "enemybullet");
+  enemyBullets.setAll("anchor.x", 0.5);
+  enemyBullets.setAll("anchor.y", 0.5);
 
   // Player
   player = game.add.sprite(300, 300, "ship");
@@ -70,7 +112,11 @@ function update() {
   var asteroid = asteroids.getFirstExists(false);
   while (asteroid) {
     // Randomly place asteroids
-    asteroid.reset(game.rnd.integerInRange(game.world.width, 0), game.rnd.integerInRange(game.world.height, 0));
+    asteroid.reset(
+      game.rnd.integerInRange(game.world.width, 0),
+      game.rnd.integerInRange(game.world.height, 0)
+    );
+    asteroid.animations.stop(null, true);
     asteroid.angle = game.rnd.integerInRange(0, 360);
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
@@ -81,11 +127,68 @@ function update() {
     var asteroid = asteroids.getFirstExists(false);
   }
 
+  // Enemy movement
+  var enemy = enemies.getFirstExists(false);
+  while (enemy) {
+    // Randomly place asteroids
+    enemy.reset(
+      game.rnd.integerInRange(game.world.width, 0),
+      game.rnd.integerInRange(game.world.height, 0)
+    );
+    enemy.angle = game.rnd.integerInRange(0, 360);
+
+    enemy.health = game.rnd.integerInRange(1, 20);
+
+    // Get the next one
+    var enemy = enemies.getFirstExists(false);
+  }
+
+  // Enemies face player
+  enemies.forEachExists(enemy => {
+    // Find closest wrapped location
+    var wrapX;
+    var wrapY;
+    if (enemy.x > player.x) wrapX = player.x + game.width;
+    else wrapX = player.x - game.width;
+    if (enemy.y > player.y) wrapY = player.y + game.height;
+    else wrapY = player.y - game.height;
+
+    const points = [{x: player.x, y: player.y}, {x: wrapX, y: player.y}, {x: player.x, y: wrapY}];
+    var closest = {x: player.x, y: player.y};
+    var closestDistance = game.physics.arcade.distanceBetween(enemy, closest);
+    points.forEach(point => {
+      const distance = game.physics.arcade.distanceBetween(enemy, point);
+      if (distance < closestDistance) {
+        closest = point;
+        closestDistance = distance;
+      }
+    });
+
+    idealRotation = game.physics.arcade.angleBetween(enemy, closest);
+
+    if (idealRotation > enemy.rotation + maxRotationDiff)
+      enemy.rotation += maxRotationDiff;
+    else if (idealRotation < enemy.rotation - maxRotationDiff)
+      enemy.rotation -= maxRotationDiff;
+    else
+      enemy.rotation = idealRotation;
+
+    if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
+      fireEnemyBullet(enemy);
+    }
+
+    game.physics.arcade.velocityFromRotation(
+      enemy.rotation,
+      200,
+      enemy.body.velocity
+    );
+  });
+
   // Player movement
   if (cursors.up.isDown) {
     game.physics.arcade.accelerationFromRotation(
       player.rotation,
-      200,
+      300,
       player.body.acceleration
     );
   } else {
@@ -105,14 +208,38 @@ function update() {
   }
 
   screenWrap(player);
-
   bullets.forEachExists(screenWrap, this);
-
   asteroids.forEachExists(screenWrap, this);
+  enemies.forEachExists(screenWrap, this);
+  enemyBullets.forEachExists(screenWrap, this);
 
+  game.physics.arcade.collide(asteroids, asteroids);
   game.physics.arcade.collide(asteroids, player, onAsteroidPlayerCollision);
   game.physics.arcade.overlap(asteroids, bullets, onAsteroidBulletCollision);
-  game.physics.arcade.collide(asteroids, asteroids);
+  game.physics.arcade.overlap(asteroids, enemyBullets, onAsteroidBulletCollision);
+  game.physics.arcade.collide(asteroids, enemies, onAsteroidEnemyCollision);
+  game.physics.arcade.collide(player, enemies, onPlayerEnemyCollision);
+  game.physics.arcade.overlap(enemies, bullets, onEnemyBulletCollision);
+  game.physics.arcade.overlap(player, enemyBullets, onPlayerEnemyBulletCollision);
+}
+
+function render() {
+  game.debug.text(`Score: ${score}`, 10, 20);
+  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 40);
+}
+
+function screenWrap(player) {
+  if (player.x < 0) {
+    player.x = game.width;
+  } else if (player.x > game.width) {
+    player.x = 0;
+  }
+
+  if (player.y < 0) {
+    player.y = game.height;
+  } else if (player.y > game.height) {
+    player.y = 0;
+  }
 }
 
 function fireBullet() {
@@ -133,26 +260,8 @@ function fireBullet() {
   }
 }
 
-function screenWrap(player) {
-  if (player.x < 0) {
-    player.x = game.width;
-  } else if (player.x > game.width) {
-    player.x = 0;
-  }
-
-  if (player.y < 0) {
-    player.y = game.height;
-  } else if (player.y > game.height) {
-    player.y = 0;
-  }
-}
-
-function render() {
-  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 20);
-}
-
 function onAsteroidPlayerCollision(asteroid, player) {
-  playerHealth -= 0.1;
+  hurtPlayer(0.1);
 }
 
 function onAsteroidBulletCollision(asteroid, bullet) {
@@ -162,9 +271,47 @@ function onAsteroidBulletCollision(asteroid, bullet) {
   asteroid.health--;
 
   if (asteroid.health <= 0) {
-    asteroid.kill();
+    // TODO: Play sound here
+
+    asteroid.play(asteroid.key, 30, false, true);
 
     healPlayer(1);
+  }
+}
+
+function onAsteroidEnemyCollision(asteroid, enemy) {
+  hurtEnemy(enemy, 0.25);
+}
+
+function onPlayerEnemyCollision(player, enemy) {
+  hurtEnemy(enemy, 5);
+  hurtPlayer(4);
+}
+
+function onEnemyBulletCollision(enemy, bullet) {
+  hurtEnemy(enemy, 1);
+}
+
+function onPlayerEnemyBulletCollision(player, bullet) {
+  hurtPlayer(1);
+  bullet.kill();
+}
+
+function fireEnemyBullet(enemy) {
+  if (game.time.now > enemy.bulletTime) {
+    bullet = enemyBullets.getFirstExists(false);
+
+    if (bullet) {
+      bullet.reset(enemy.body.x + 16, enemy.body.y + 16);
+      bullet.lifespan = 2000;
+      bullet.rotation = enemy.rotation;
+      game.physics.arcade.velocityFromRotation(
+        enemy.rotation,
+        400,
+        bullet.body.velocity
+      );
+      enemy.bulletTime = game.time.now + 3000;
+    }
   }
 }
 
@@ -172,5 +319,26 @@ function healPlayer(health) {
   playerHealth = health + playerHealth;
   if (playerHealth > 10) {
     playerHealth = 10;
+  }
+}
+
+function hurtPlayer(damage) {
+  playerHealth -= damage;
+}
+
+function hurtEnemy(enemy, damage) {
+  enemy.health -= damage;
+
+  if (enemy.health <= 0) {
+    // TODO: Play sound here
+    score += 1;
+
+    var explosion = explosions.getFirstExists(false);
+    if (explosion) {
+      explosion.reset(enemy.x, enemy.y);
+      explosion.play('explode', 30, false, true);
+    }
+
+    enemy.kill();
   }
 }
