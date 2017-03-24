@@ -6,7 +6,6 @@ var game = new Phaser.Game(
   {
     create: create,
     update: update,
-    render: render,
     preload: preload
   }
 );
@@ -58,16 +57,34 @@ const dialogue = [
 
 const style = {
   font: "30pt Courier",
-  fill: "#19cb65",
-  stroke: "#119f4e",
-  strokeThickness: 2
+  fill: "#ecf0f1",
+  stroke: "#2c3e50",
+  strokeThickness: 2,
+  wordWrap: true,
+  wordWrapWidth: game.width - 32,
+  boundsAlignH: "center",
+  boundsAlignV: "middle",
+  align: "center"
 };
 const italicStyle = {
   font: "30pt Courier",
-  fill: "#19cb65",
-  stroke: "#119f4e",
+  fill: "#ecf0f1",
+  stroke: "#2c3e50",
   strokeThickness: 2,
-  fontStyle: "italic"
+  fontStyle: "italic",
+  wordWrap: true,
+  wordWrapWidth: game.width - 32,
+  boundsAlignH: "center",
+  boundsAlignV: "middle",
+  align: "center"
+};
+const reinforcementsStyle = {
+  font: "20px Courier",
+  fill: "#ecf0f1",
+  stroke: "#2c3e50",
+  boundsAlignH: "center",
+  boundsAlignV: "middle",
+  align: "center"
 };
 
 function preload() {
@@ -123,6 +140,7 @@ var asteroids;
 var enemies;
 const maxRotationDiff = 0.0174533;
 
+var reinforcementsText;
 var text;
 var dialogueIndex = 0;
 var lineIndex = -1;
@@ -198,7 +216,7 @@ function create() {
   enemyBullets.setAll("anchor.y", 0.5);
 
   // Player
-  player = game.add.sprite(game.width / 2, game.height / 1.5, "ship");
+  player = game.add.sprite(game.world.centerX, game.height / 1.5, "ship");
   player.angle = 270;
   player.anchor.set(0.5);
   game.physics.enable(player, Phaser.Physics.ARCADE);
@@ -206,22 +224,32 @@ function create() {
   player.body.drag.set(100);
   player.body.maxVelocity.set(200);
 
-  // Dialogue text
-  text = game.add.text(32, game.height - 100, "", style);
-  nextLine();
-
-  // Game input
-  cursors = game.input.keyboard.createCursorKeys();
-  game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
-
   // Health bar
   healthBar = new HealthBar(game, {
-    x: game.width / 2,
+    x: game.world.centerX,
     y: game.height - 20,
     width: game.width,
     bar: { color: "#ed3838" },
     bg: { color: "#f7f7f7" }
   });
+
+  // Dialogue text
+  text = game.add.text(game.world.centerX, 100, "", style);
+  text.anchor.setTo(0.5);
+  nextLine();
+
+  // Reinforcements text
+  reinforcementsText = game.add.text(
+    game.world.centerX,
+    game.height - 50,
+    "",
+    reinforcementsStyle
+  );
+  reinforcementsText.anchor.setTo(0.5);
+
+  // Game input
+  cursors = game.input.keyboard.createCursorKeys();
+  game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
 }
 
 function update() {
@@ -230,7 +258,7 @@ function update() {
 
   if (firstUpdate) {
     // Spawn first asteroid for story
-    asteroid.reset(game.width / 2, game.height / 2.5);
+    asteroid.reset(game.world.centerX, game.height / 2.5);
     asteroid.angle = game.rnd.integerInRange(0, 360);
     asteroid = asteroids.getFirstExists(false);
     asteroid.health = 1;
@@ -261,7 +289,7 @@ function update() {
     if (enemiesInvading) {
       // Spawn 5, have them slide up map a bit, while looking at player
       for (var i = 1; i < 6; i++) {
-        enemy.reset(game.width * 0.1667 * i, game.height);
+        enemy.reset(game.width * 0.1667 * i, game.height - 41);
         enemy.rotation = game.physics.arcade.angleBetween(enemy, player);
         enemy.body.velocity.y = -50;
         enemy = enemies.getFirstExists(false);
@@ -333,7 +361,7 @@ function update() {
         enemy.rotation = idealRotation;
 
       if (enemiesHaveInvaded) {
-        if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff) {
+        if (Math.abs(idealRotation - enemy.rotation) < 3 * maxRotationDiff && player.alive) {
           fireEnemyBullet(enemy);
         }
 
@@ -408,11 +436,10 @@ function update() {
     enemyBullets,
     onPlayerEnemyBulletCollision
   );
-}
 
-function render() {
+  // Update reinforcements text
   if (enemiesHaveInvaded)
-    game.debug.text(`Enemy reinforcements: ${reinforcements}`, game., 20);
+    reinforcementsText.setText(`Enemy reinforcements: ${reinforcements}`);
 }
 
 function screenWrap(player) {
@@ -456,7 +483,7 @@ function onAsteroidBulletCollision(asteroid, bullet) {
   hurtAsteroid(asteroid, 1);
   bullet.kill();
 
-  if (dialogueIndex === 0 && lineIndex >= 14) {
+  if (dialogueIndex === 0 && lineIndex > 14) {
     text.setText("");
     line = "";
     dialogueIndex = 1;
