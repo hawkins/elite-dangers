@@ -43,7 +43,7 @@ const dialogue = [
     "<i>The world will never know...",
     "<i>what really happened to you.",
     " ",
-    "<i>Game Over"
+    "<i>Game Over."
   ],
   [
     "???: HE'S TOO STRONG!! RETREAT!!",
@@ -100,6 +100,8 @@ function preload() {
   game.load.spritesheet("explosion", "assets/explosion.png", 64, 64);
   game.load.audio("story", "assets/story.ogg");
 }
+
+var healthBar;
 
 var storyMusic;
 
@@ -211,6 +213,15 @@ function create() {
   // Game input
   cursors = game.input.keyboard.createCursorKeys();
   game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
+
+  // Health bar
+  healthBar = new HealthBar(game, {
+    x: game.width / 2,
+    y: game.height - 20,
+    width: game.width,
+    bar: { color: "#ed3838" },
+    bg: { color: "#f7f7f7" }
+  });
 }
 
 function update() {
@@ -400,8 +411,8 @@ function update() {
 }
 
 function render() {
-  game.debug.text(`Enemy reinforcements: ${reinforcements}`, 10, 20);
-  game.debug.text(`Player health: ${playerHealth.toFixed(1)}`, 10, 40);
+  if (enemiesHaveInvaded)
+    game.debug.text(`Enemy reinforcements: ${reinforcements}`, game., 20);
 }
 
 function screenWrap(player) {
@@ -412,8 +423,8 @@ function screenWrap(player) {
   }
 
   if (player.y < 0) {
-    player.y = game.height;
-  } else if (player.y > game.height) {
+    player.y = game.height - 40;
+  } else if (player.y > game.height - 40) {
     player.y = 0;
   }
 }
@@ -504,9 +515,12 @@ function fireEnemyBullet(enemy) {
 }
 
 function healPlayer(health) {
-  playerHealth = health + playerHealth;
-  if (playerHealth > maxPlayerHealth) {
-    playerHealth = maxPlayerHealth;
+  if (!gameOver && dialogueIndex < 2) {
+    playerHealth = health + playerHealth;
+    if (playerHealth > maxPlayerHealth) {
+      playerHealth = maxPlayerHealth;
+    }
+    healthBar.setPercent(playerHealth);
   }
 }
 
@@ -525,9 +539,12 @@ function hurtPlayer(damage) {
       }
 
       // End game after a few seconds
-      setTimeout(() => {
-        gameOver = true;
-      }, 7000);
+      setTimeout(
+        () => {
+          gameOver = true;
+        },
+        7000
+      );
 
       // Play defeat dialogue
       dialogueIndex = 2;
@@ -536,6 +553,7 @@ function hurtPlayer(damage) {
       text.setText(line);
       nextLine();
     }
+    healthBar.setPercent(playerHealth);
   }
 }
 
