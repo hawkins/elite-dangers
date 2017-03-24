@@ -33,7 +33,7 @@ const dialogue = [
   [
     "???: THERE HE IS!! Destroy him!",
     "You: Great... let's hope this damn engine still works!",
-    "<i>Steer with (A), (D), throttle with (W), (S)."
+    "<i>Steer with arrow keys (Left), (Right), throttle with (Up), (Down)."
   ],
   [
     "<i>Engines are failing!",
