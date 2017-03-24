@@ -33,7 +33,7 @@ const dialogue = [
   [
     "???: THERE HE IS!! Destroy him!",
     "You: Great... let's hope this damn engine still works!",
-    "<i>Steer with arrow keys (Left), (Right), throttle with (Up), (Down)."
+    "<i>Steer with arrow keys (Left), (Right), throttle with (Up)."
   ],
   [
     "<i>Engines are failing!",
@@ -56,7 +56,7 @@ const dialogue = [
 ];
 
 const style = {
-  font: "30pt Courier",
+  font: "bold 30pt Courier",
   fill: "#ecf0f1",
   stroke: "#2c3e50",
   strokeThickness: 2,
@@ -67,7 +67,7 @@ const style = {
   align: "center"
 };
 const italicStyle = {
-  font: "30pt Courier",
+  font: "bold 30pt Courier",
   fill: "#ecf0f1",
   stroke: "#2c3e50",
   strokeThickness: 2,
@@ -99,8 +99,9 @@ var playerBulletSound;
 var bulletHitSound;
 var explosionSound;
 
+const asteroidHealing = 3;
 const maxPlayerHealth = 100;
-var playerHealth = maxPlayerHealth;
+var playerHealth = maxPlayerHealth - asteroidHealing;
 var reinforcements = 100;
 
 var player;
@@ -256,6 +257,7 @@ function create() {
     bar: { color: "#ed3838" },
     bg: { color: "#f7f7f7" }
   });
+  healthBar.setPercent(playerHealth);
 
   // Dialogue text
   text = game.add.text(game.world.centerX, 100, "", style);
@@ -301,7 +303,7 @@ function update() {
     asteroid.body.velocity.x = game.rnd.integerInRange(-20, 20);
     asteroid.body.velocity.y = game.rnd.integerInRange(-20, 20);
 
-    asteroid.health = game.rnd.integerInRange(1, 10);
+    asteroid.health = game.rnd.integerInRange(1, 5);
 
     // Get the next one
     asteroid = asteroids.getFirstExists(false);
@@ -462,8 +464,10 @@ function update() {
   );
 
   // Update reinforcements text
-  if (enemiesHaveInvaded)
+  if (enemiesHaveInvaded && reinforcements > 0)
     reinforcementsText.setText(`Enemy reinforcements: ${reinforcements}`);
+  else
+    reinforcementsText.setText("");
 }
 
 function screenWrap(player) {
@@ -556,7 +560,7 @@ function onEnemyBulletCollision(enemy, bullet) {
 }
 
 function onPlayerEnemyBulletCollision(player, bullet) {
-  // TODO: Play bullet hit player sound here
+  bulletHitSound.play();
   bullet.kill();
   hurtPlayer(1);
 }
@@ -674,12 +678,12 @@ function hurtAsteroid(asteroid, damage) {
   asteroid.health -= damage;
 
   if (asteroid.health <= 0) {
-    // TODO: Play sound here
+    // Play sound here
     explosionSound.play();
 
     asteroid.play(asteroid.key, 30, false, true);
 
-    healPlayer(1);
+    healPlayer(asteroidHealing);
   }
 }
 
